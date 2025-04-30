@@ -1,0 +1,103 @@
+// Tokens reconocidos
+PROGRAM: "PROGRAM"
+VAR: "VAR"
+VOID: "VOID"
+IF: "IF"
+ELSE: "ELSE"
+WHILE: "WHILE"
+DO: "DO"
+PRINT: "PRINT"
+MAIN: "MAIN"
+END: "END"
+INT: "INT"
+FLOAT: "FLOAT"
+COLON: ":"
+COMMA: ","
+SEMICOLON: ";"
+LPAREN: "("
+RPAREN: ")"
+LBRACKET: "["
+RBRACKET: "]"
+LBRACE: "{"
+RBRACE: "}"
+ASSIGN: "="
+PLUS: "+"
+MINUS: "-"
+MULT: "*"
+DIV: "/"
+LT: "<"
+GT: ">"
+NEQ: "!="
+
+// Expresiones regulares para tokens
+ID: /[a-zA-Z][a-zA-Z0-9]*/
+CTE_INT: /[0-9]+/
+CTE_FLOAT: /[0-9]+\.[0-9]+/
+STRING: /"([^\"]|\\.)*"/
+
+// Reglas gramaticales
+start: programa
+programa: PROGRAM ID SEMICOLON vars funcs MAIN body END
+vars: VAR ids COLON type SEMICOLON var_plus
+    |
+var_plus: ids COLON type SEMICOLON var_plus
+        |
+ids: ID com
+com: COMMA ids
+   |
+type: INT
+    | FLOAT
+funcs: VOID ID LPAREN funcs_param RPAREN LBRACKET vars body RBRACKET SEMICOLON funcs
+     |
+funcs_param: ID COLON type funcs_com
+           |
+funcs_com: COMMA funcs_param
+         |
+f_call: ID LPAREN func_exp RPAREN SEMICOLON
+func_exp: expression func_ecom
+         |
+func_ecom: COMMA func_exp
+         |
+body: LBRACE statement RBRACE
+statement: asignacion statement
+         | condition statement
+         | cycle statement
+         | f_call statement
+         | print statement
+         |
+asignacion: ID ASSIGN expression SEMICOLON
+condition: IF LPAREN expression RPAREN body else SEMICOLON
+else: ELSE body
+    |
+cycle: WHILE LPAREN expression RPAREN DO body SEMICOLON
+print: PRINT LPAREN print_cont RPAREN SEMICOLON
+print_cont: expression print_com
+          | STRING print_com
+print_com: COMMA print_cont
+        |
+expression: exp exp_opc
+exp_opc: LT exp
+       | GT exp
+       | NEQ exp
+       |
+exp: termino signo
+signo: PLUS exp
+     | MINUS exp
+     |
+termino: factor muldiv
+muldiv: MULT termino
+      | DIV termino
+      |
+factor: LPAREN expression RPAREN
+      | fact_signo ct_id
+fact_signo: PLUS
+          | MINUS
+          |
+ct_id: ID
+     | cte
+    
+cte: CTE_INT
+     | CTE_FLOAT
+
+%import common.WS
+%ignore WS
