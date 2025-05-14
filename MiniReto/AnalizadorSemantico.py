@@ -2,12 +2,14 @@
 
 from EstructurasSemanticas import FunctionDirectory  # Importa las estructuras de datos
 from CuboSemantico import check_semantic          # Importa el cubo semántico
+from RepresentacionCuadruplos import QuadrupleGenerator # Importa el generador de cuádruplos
 
 
 class SemanticAnalyzer:
     def __init__(self):
         self.function_directory = FunctionDirectory()
         self.current_function = None  # Para rastrear la función actual
+        self.quad_generator = QuadrupleGenerator()
 
     def analyze(self, tree):
         """Analiza el árbol sintáctico para llenar el Directorio de Funciones y validar tipos."""
