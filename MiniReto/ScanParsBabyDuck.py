@@ -1,5 +1,7 @@
 from lark import Lark, UnexpectedInput
 import os
+from CuboSemantico import check_semantic
+from AnalizadorSemantico import SemanticAnalyzer
 
 # Obtener la ruta del directorio donde está el script
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -31,6 +33,12 @@ def parse_code(code, grammar_file):
         tree = parser.parse(code)
         print("Árbol sintáctico generado:")
         print(tree.pretty())
+
+        # Realizar el análisis semántico
+        analyzer = SemanticAnalyzer()
+        analyzer.analyze(tree)
+        print("Análisis semántico completado sin errores.")
+
     except UnexpectedInput as e:
         print("Error de sintaxis:")
         print(e)
@@ -45,6 +53,15 @@ MAIN {
 }
 END
 """
+
+# Prueba del cubo semántico
+def test_cubo_semantico():
+    assert check_semantic('+', 'INT', 'INT') == 'INT'
+    assert check_semantic('*', 'FLOAT', 'INT') == 'FLOAT'
+    try:
+        check_semantic('+', 'STRING', 'INT')
+    except TypeError as e:
+        assert "Error semántico" in str(e)
 
 # Procesar código
 if __name__ == "__main__":

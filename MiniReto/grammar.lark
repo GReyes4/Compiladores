@@ -30,7 +30,7 @@ GT: ">"
 NEQ: "!="
 
 // Expresiones regulares para tokens
-ID: /[a-zA-Z][a-zA-Z0-9]*/
+ID: /[a-zA-Z][a-zA-Z0-9_]*/
 CTE_INT: /[0-9]+/
 CTE_FLOAT: /[0-9]+\.[0-9]+/
 STRING: /"([^\"]|\\.)*"/
