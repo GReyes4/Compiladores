@@ -49,6 +49,16 @@ PROGRAM Test;
 VAR x : INT;
 MAIN {
     x = 10;
+    IF (x > 5) {
+        PRINT("Mayor que 5");
+    } ELSE {
+        PRINT("Menor o igual a 5");
+    };
+    
+    WHILE (x != 0) DO {
+        x = x - 1;
+    };
+    
     PRINT("Hola Mundo");
 }
 END

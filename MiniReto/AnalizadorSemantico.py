@@ -66,6 +66,60 @@ class SemanticAnalyzer:
         # Validar la asignación usando el cubo semántico
         check_semantic("=", var_type, value_type)
 
+    def _process_condition(self, tree):
+        """Valida la instrucción IF."""
+        # Obtener la expresión condicional
+        condition_node = tree.children[0]
+        condition_type = self._get_expression_type(condition_node)
+
+        # Verificar que la expresión sea de tipo BOOL implícito
+        if condition_type != "BOOL":
+            raise TypeError(f"Error semántico: La expresión condicional debe ser de tipo booleano implícito, pero es de tipo {condition_type}.")
+
+        # Procesar el cuerpo del IF
+        then_body = tree.children[1]
+        self._process_body(then_body)
+
+        # Si hay un ELSE, procesar su cuerpo
+        if len(tree.children) == 3:
+            else_body = tree.children[2]
+            self._process_body(else_body)
+
+    def _process_cycle(self, tree):
+        """Valida la instrucción WHILE."""
+        # Obtener la expresión condicional
+        condition_node = tree.children[0]
+        condition_type = self._get_expression_type(condition_node)
+
+        # Verificar que la expresión sea de tipo BOOL implícito
+        if condition_type != "BOOL":
+            raise TypeError(f"Error semántico: La expresión condicional debe ser de tipo booleano implícito, pero es de tipo {condition_type}.")
+
+        # Procesar el cuerpo del ciclo
+        body = tree.children[1]
+        self._process_body(body)
+
+    def _process_f_call(self, tree):
+        """Valida la llamada a una función."""
+        func_name = tree.children[0].value
+
+        try:
+            function_info = self.function_directory.get_function(func_name)
+        except ValueError as e:
+            raise NameError(f"Error semántico: La función '{func_name}' no está definida.") from e
+
+        args_nodes = tree.children[1:]
+        args_types = [self._get_expression_type(arg) for arg in args_nodes]
+
+        param_types = function_info["variable_table"].get_variable_types()
+        if len(args_types) != len(param_types):
+            raise TypeError(f"Error semántico: La función '{func_name}' espera {len(param_types)} argumentos, pero se proporcionaron {len(args_types)}.")
+        
+        for arg_type, param_type in zip(args_types, param_types):
+            if arg_type != param_type:
+                raise TypeError(f"Error semántico: El tipo del argumento no coincide con el tipo del parámetro.")
+
+
     def _process_print(self, tree):
         """Valida la instrucción PRINT."""
         print_value = tree.children[0]
@@ -86,5 +140,13 @@ class SemanticAnalyzer:
             right_type = self._get_expression_type(node.children[1])
             operator = node.data
             return check_semantic(operator, left_type, right_type)
+        elif node.data in ["<", ">", "!="]:
+            left_type = self._get_expression_type(node.children[0])
+            right_type = self._get_expression_type(node.children[1])
+            operator = node.data
+            result_type = check_semantic(operator, left_type, right_type)
+            if result_type != "BOOL":
+                raise TypeError(f"Error semántico: La operación '{operator}' debe devolver un tipo booleano implícito.")
+            return "BOOL"
         else:
             raise ValueError(f"Tipo de nodo no reconocido: {node}")
