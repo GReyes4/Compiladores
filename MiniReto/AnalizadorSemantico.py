@@ -1,5 +1,5 @@
 # Analizador semántico
-
+from lark import Tree, Token
 from EstructurasSemanticas import FunctionDirectory  # Importa las estructuras de datos
 from CuboSemantico import check_semantic          # Importa el cubo semántico
 from RepresentacionCuadruplos import QuadrupleGenerator # Importa el generador de cuádruplos
@@ -13,31 +13,98 @@ class SemanticAnalyzer:
 
     def analyze(self, tree):
         """Analiza el árbol sintáctico para llenar el Directorio de Funciones y validar tipos."""
-        for child in tree.children:
-            if child.data == "programa":
-                self._process_program(child)
-            elif child.data == "vars":
-                self._process_vars(child)
-            elif child.data == "funcs":
-                self._process_funcs(child)
-            elif child.data == "body":
-                self._process_body(child)
+        #print(tree.pretty())
+
+        if not tree.children:
+            raise ValueError("El árbol sintáctico está vacío.")
+        
+        # Procesar el nodo 'programa'
+        programa_node = tree.children[0]
+        if programa_node.data != "programa":
+            raise ValueError(f"Se esperaba un nodo 'programa', pero se encontró '{programa_node.data}'.")
+        
+        self._process_program(programa_node)
+
+        # Iterar sobre los nodos internos de 'programa'
+        for child in programa_node.children:
+            if isinstance(child, Tree):  # Asegurar que sea un nodo del árbol
+                if child.data == "vars":
+                    self._process_vars(child)
+                elif child.data == "funcs":
+                    self._process_funcs(child)
+                elif child.data == "body":
+                    self._process_body(child)
+            else:
+                print(f"Token ignorado: {child.type} ({child.value})")
 
     def _process_program(self, tree):
         """Procesa la declaración del programa principal."""
+        #print("tree en process_program:", tree)
         program_name = tree.children[0].value
         self.function_directory.add_function(program_name, "VOID")
         self.current_function = program_name
 
     def _process_vars(self, tree):
         """Procesa las declaraciones de variables."""
-        for var_decl in tree.children:
-            var_name = var_decl.children[0].value
-            var_type = var_decl.children[1].value
-            self.function_directory.add_variable_to_function(self.current_function, var_name, var_type)
+        print("Procesando variables...")
+        var_names = []
+        var_type = None
+
+        for child in tree.children:
+            if isinstance(child, Tree):  # Procesar solo nodos del árbol
+                print("child en process_vars:", child)
+                if child.data == "ids":  # Nodo 'ids' contiene los nombres de las variables
+                    var_names = self._extract_ids(child)  # Extraer los nombres de las variables
+                    print("var_names:", var_names)
+                elif child.data == "type":  # Nodo 'type' contiene el tipo de las variables
+                    var_type = child.children[0].value  # Obtener el tipo (INT o FLOAT)
+                    print("var_type:", var_type)
+            else:
+                print(f"Token ignorado: {child.type} ({child.value})")  # Mensaje más descriptivo
+
+        # Validar que se haya encontrado un tipo
+        if not var_type:
+            raise ValueError("Error semántico: Tipo de variable no especificado.")
+
+        # Agregar las variables al directorio de funciones
+        for var_name in var_names:
+            try:
+                self.function_directory.add_variable_to_function(self.current_function, var_name, var_type)
+            except ValueError as e:
+                print(e)  # Imprimir el error detallado
+                raise  # Relanzar el error para detener el análisis
+
+    def _extract_ids(self, ids_node):
+        """Extrae los nombres de las variables de un nodo 'ids'."""
+        var_names = []
+        current = ids_node
+        print("ids_node en extract_ids:", ids_node)
+
+        while current:
+            # Procesar el primer hijo (puede ser un token o un nodo)
+            print("current en extract_ids:", current)
+            print("current.children:", current.children)
+
+            # Verificar si hay elementos en current.children
+            if not current.children:
+                break
+
+            if isinstance(current.children[0], Token) and current.children[0].type == "ID":
+                var_name = current.children[0].value
+                var_names.append(var_name)
+                print("ID encontrado:", var_name)
+
+            # Verificar si hay más IDs en el nodo 'com'
+            if len(current.children) > 1 and isinstance(current.children[1], Tree) and current.children[1].data == "com":
+                current = current.children[1]  # Avanzar al siguiente ID
+            else:
+                break
+
+        return var_names
 
     def _process_funcs(self, tree):
         """Procesa las declaraciones de funciones."""
+        #print("tree en process_funcs:", tree)
         for func_decl in tree.children:
             func_name = func_decl.children[0].value
             return_type = func_decl.children[1].value
@@ -50,23 +117,39 @@ class SemanticAnalyzer:
 
     def _process_body(self, tree):
         """Procesa el cuerpo de una función."""
-        for statement in tree.children:
-            if statement.data == "asignacion":
-                self._process_asignacion(statement)
-            elif statement.data == "print":
-                self._process_print(statement)
+        #print("Cuerpo de la función:", tree.children)
+        for child in tree.children:
+            #print("child en process_body:", child)
+            if isinstance(child, Tree):  # Procesar solo nodos del árbol
+                if child.data == "asignacion":
+                    self._process_asignacion(child)
+                elif child.data == "print":
+                    self._process_print(child)
+                elif child.data == "condition":
+                    self._process_condition(child)
+                elif child.data == "cycle":
+                    self._process_cycle(child)
+                elif child.data == "f_call":
+                    self._process_f_call(child)
+            else:
+                print(f"Elemento ignorado: {child}")  # Ignorar tokens
 
     def _process_asignacion(self, tree):
         """Valida la asignación de variables."""
+        print("Asignación del tree.children:", tree.children)
         var_name = tree.children[0].value
+        print("var_name:", var_name)
         var_type = self.function_directory.get_variable_type_in_function(self.current_function, var_name)
+        print("var_type:", var_type)
 
         # Obtener el tipo del valor asignado
         value_node = tree.children[1]
+        print("value_node:", value_node)
         value_type = self._get_expression_type(value_node)
+        print("value_type:", value_type)
 
         # Validar la asignación usando el cubo semántico
-        check_semantic("=", var_type, value_type)
+        print(check_semantic("=", var_type, value_type))
 
     def _process_condition(self, tree):
         """Valida la instrucción IF."""
@@ -129,8 +212,15 @@ class SemanticAnalyzer:
 
     def _get_expression_type(self, node):
         """Obtiene el tipo de una expresión."""
+        print("get_expression_type del nodo: ", node)
+        print("node.type: ", node.type)
+        print("node.data: ", node.data)
         if node.type == "ID":
-            return self.function_directory.get_variable_type_in_function(self.current_function, node.value)
+            try:
+                return self.function_directory.get_variable_type_in_function(self.current_function, node.value)
+            except ValueError as e:
+                print(e)  # Imprimir el error detallado
+                raise  # Relanzar el error para detener el análisis
         elif node.type == "CTE_INT":
             return "INT"
         elif node.type == "CTE_FLOAT":
@@ -141,7 +231,18 @@ class SemanticAnalyzer:
             left_type = self._get_expression_type(node.children[0])
             right_type = self._get_expression_type(node.children[1])
             operator = node.data
-            return check_semantic(operator, left_type, right_type)
+            # Validar tipos usando el cubo semántico
+            result_type = check_semantic(operator, left_type, right_type)
+
+            # Generar un cuádruplo para la operación
+            temp_var = self.quad_generator.generate_temp()
+            self.quad_generator.add_quadruple(operator, left_type, right_type, temp_var)
+
+            # Agregar el resultado a la pila de operandos
+            self.quad_generator.operand_stack.append(temp_var)
+            self.quad_generator.type_stack.append(result_type)
+
+            return result_type
         elif node.data in ["<", ">", "!="]:
             left_type = self._get_expression_type(node.children[0])
             right_type = self._get_expression_type(node.children[1])

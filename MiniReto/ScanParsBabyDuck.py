@@ -31,8 +31,8 @@ def parse_code(code, grammar_file):
     try:
         # Parsear el código fuente
         tree = parser.parse(code)
-        print("Árbol sintáctico generado:")
-        print(tree.pretty())
+        #print("Árbol sintáctico generado:")
+        #print(tree.pretty())
 
         # Realizar el análisis semántico
         analyzer = SemanticAnalyzer()
@@ -45,6 +45,23 @@ def parse_code(code, grammar_file):
 
 # Ejemplo de código fuente en BabyDuck
 babyduck_code = """
+PROGRAM Test;
+VAR x : INT;
+x : INT;
+MAIN {
+    x = 10 + 5;
+    IF (x > 5) {
+        x = x - 2 + 3 * 20;
+        y = 5.0;
+        PRINT("Mayor que 5");
+    };
+    
+    PRINT("Hola Mundo");
+}
+END
+"""
+
+""" Prueba 2
 PROGRAM Test;
 VAR x : INT;
 MAIN {
