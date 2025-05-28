@@ -47,7 +47,7 @@ def parse_code(code, grammar_file):
 babyduck_code = """
 PROGRAM Test;
 VAR x : INT;
-x : INT;
+y : FLOAT;
 MAIN {
     x = 10 + 5;
     IF (x > 5) {
