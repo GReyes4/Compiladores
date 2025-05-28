@@ -1,41 +1,59 @@
 # Estructuras semánticas de Tabla de Variables y Directorio de Funciones
 
-class VariableTable:
+class VariableInfo:
+    def __init__(self, name, var_type, scope='local'):
+        self.name = name
+        self.type = var_type
+        self.scope = scope  # 'global' o 'local'
+
+    def __repr__(self):
+        return f"VariableInfo(name={self.name}, type={self.type}, scope={self.scope})"
+
+class TablaVariables:
     def __init__(self):
         self.variables = {}
 
-    def add_variable(self, var_name, var_type):
-        if var_name in self.variables:
-            raise ValueError(f"Error semántico: La variable '{var_name}' ya está declarada.")
-        self.variables[var_name] = var_type
+    def add_variable(self, name, var_type, scope='local'):
+        if name in self.variables:
+            raise ValueError(f"Variable '{name}' ya declarada en este ámbito.")
+        self.variables[name] = VariableInfo(name, var_type, scope)
 
-    def get_variable_type(self, var_name):
-        if var_name not in self.variables:
-            raise ValueError(f"Error semántico: La variable '{var_name}' no está declarada.")
-        return self.variables[var_name]
+    def get_variable(self, name):
+        return self.variables.get(name)
 
+    def __repr__(self):
+        return f"TablaVariables({self.variables})"
 
-class FunctionDirectory:
+class FuncionInfo:
+    def __init__(self, name, return_type, param_types):
+        self.name = name
+        self.return_type = return_type
+        self.param_types = param_types  # lista de tipos de parámetros
+        self.tabla_variables = TablaVariables()
+
+    def __repr__(self):
+        return (f"FuncionInfo(name={self.name}, return_type={self.return_type}, "
+                f"param_types={self.param_types}, tabla_variables={self.tabla_variables})")
+
+class DirectorioFunciones:
     def __init__(self):
-        self.functions = {}
+        self.funciones = {}
+        self.global_vars = TablaVariables()
 
-    def add_function(self, func_name, return_type):
-        if func_name in self.functions:
-            raise ValueError(f"Error semántico: La función '{func_name}' ya está declarada.")
-        self.functions[func_name] = {
-            "return_type": return_type,
-            "variable_table": VariableTable()
-        }
+    def add_funcion(self, name, return_type, param_types):
+        if name in self.funciones:
+            raise ValueError(f"Función '{name}' ya declarada.")
+        self.funciones[name] = FuncionInfo(name, return_type, param_types)
 
-    def get_function(self, func_name):
-        if func_name not in self.functions:
-            raise ValueError(f"Error semántico: La función '{func_name}' no está declarada.")
-        return self.functions[func_name]
+    def get_funcion(self, name):
+        return self.funciones.get(name)
 
-    def add_variable_to_function(self, func_name, var_name, var_type):
-        function_info = self.get_function(func_name)
-        function_info["variable_table"].add_variable(var_name, var_type)
+    def add_global_variable(self, name, var_type):
+        self.global_vars.add_variable(name, var_type, scope='global')
 
-    def get_variable_type_in_function(self, func_name, var_name):
-        function_info = self.get_function(func_name)
-        return function_info["variable_table"].get_variable_type(var_name)
+    def get_global_variable(self, name):
+        return self.global_vars.get_variable(name)
+
+    def __repr__(self):
+        return (f"DirectorioFunciones(funciones={self.funciones}, "
+                f"global_vars={self.global_vars})")
