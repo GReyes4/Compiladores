@@ -8,6 +8,7 @@ class VariableTable:
         if var_name in self.variables:
             raise ValueError(f"Error semántico: La variable '{var_name}' ya está declarada.")
         self.variables[var_name] = var_type
+        print(f"Variable '{var_name}' de tipo '{var_type}' añadida a la tabla de variables.")
 
     def get_variable_type(self, var_name):
         if var_name not in self.variables:

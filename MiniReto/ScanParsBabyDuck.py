@@ -1,7 +1,6 @@
 from lark import Lark, UnexpectedInput
 import os
 from CuboSemantico import check_semantic
-from AnalizadorSemantico import SemanticAnalyzer
 
 # Obtener la ruta del directorio donde está el script
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -31,13 +30,8 @@ def parse_code(code, grammar_file):
     try:
         # Parsear el código fuente
         tree = parser.parse(code)
-        #print("Árbol sintáctico generado:")
-        #print(tree.pretty())
-
-        # Realizar el análisis semántico
-        analyzer = SemanticAnalyzer()
-        analyzer.analyze(tree)
-        print("Análisis semántico completado sin errores.")
+        print("Árbol sintáctico generado:")
+        print(tree.pretty())
 
     except UnexpectedInput as e:
         print("Error de sintaxis:")
@@ -47,33 +41,13 @@ def parse_code(code, grammar_file):
 babyduck_code = """
 PROGRAM Test;
 VAR x : INT;
-x : INT;
+y : FLOAT;
 MAIN {
     x = 10 + 5;
+    y = 0.2 * 2;
     IF (x > 5) {
         x = x - 2 + 3 * 20;
-        y = 5.0;
         PRINT("Mayor que 5");
-    };
-    
-    PRINT("Hola Mundo");
-}
-END
-"""
-
-""" Prueba 2
-PROGRAM Test;
-VAR x : INT;
-MAIN {
-    x = 10;
-    IF (x > 5) {
-        PRINT("Mayor que 5");
-    } ELSE {
-        PRINT("Menor o igual a 5");
-    };
-    
-    WHILE (x != 0) DO {
-        x = x - 1;
     };
     
     PRINT("Hola Mundo");

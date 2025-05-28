@@ -21,3 +21,7 @@ class QuadrupleGenerator:
         print("Cuádruplos generados:")
         for i, quad in enumerate(self.quad_queue, start=1):
             print(f"{i}: {quad}")
+
+
+
+            
