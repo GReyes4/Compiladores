@@ -50,6 +50,7 @@ class DirectorioFunciones:
 
     def add_global_variable(self, name, var_type):
         self.global_vars.add_variable(name, var_type, scope='global')
+        print(f"Variable global '{name}' de tipo '{var_type}' añadida.")
 
     def get_global_variable(self, name):
         return self.global_vars.get_variable(name)
