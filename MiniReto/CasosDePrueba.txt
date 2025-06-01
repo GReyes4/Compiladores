@@ -1,0 +1,161 @@
+
+General 1
+"""
+PROGRAM Test;
+VAR x : INT;
+y : FLOAT;
+MAIN {
+    x = 10 + 5;
+    IF (x > 5) {
+        x = x - 2 + 3 * 20;
+        y = 5.0;
+        PRINT("Mayor que 5");
+    };
+    
+    PRINT("Hola Mundo");
+}
+END
+"""
+
+General 2
+"""
+PROGRAM Test;
+VAR x : INT;
+MAIN {
+    x = 10;
+    IF (x > 5) {
+        PRINT("Mayor que 5");
+    } ELSE {
+        PRINT("Menor o igual a 5");
+    };
+    
+    WHILE (x != 0) DO {
+        x = x - 1;
+    };
+    
+    PRINT("Hola Mundo");
+}
+END
+"""
+
+1. Declaración de variables globales y locales
+"""
+PROGRAM Prueba1;
+VAR a : INT;
+b : FLOAT;
+MAIN {
+    a = 5;
+    b = 2.5;
+}
+END
+"""
+
+2. Declaración de función sin parámetros
+"""
+PROGRAM Prueba2;
+VAR x : INT;
+VOID foo() [ VAR y : FLOAT; { x = 10; } ];
+MAIN {
+    x = 1;
+    foo();
+}
+END
+"""
+
+3. Declaración de función con parámetros y uso
+"""
+PROGRAM Prueba3;
+VAR x : INT;
+VOID suma(a : INT, b : FLOAT) [ VAR c : FLOAT; { c = a + b; PRINT(c); } ];
+MAIN {
+    x = 10;
+    suma(x, 2.5);
+}
+END
+"""
+
+4. Uso de IF, ELSE y WHILE
+"""
+PROGRAM Prueba4;
+VAR x : INT;
+MAIN {
+    x = 10;
+    IF (x > 5) {
+        PRINT("Mayor que 5");
+    } ELSE {
+        PRINT("Menor o igual a 5");
+    };
+    WHILE (x != 0) DO {
+        x = x - 1;
+    };
+}
+END
+"""
+
+5. Expresiones aritméticas y relacionales complejas
+"""
+PROGRAM Prueba5;
+VAR x : INT;
+y : FLOAT;
+MAIN {
+    x = (10 + 2) * 3 - 4 / 2;
+    y = 5.0 + x * 2;
+    IF (y < 20.5) {
+        PRINT("y es menor");
+    };
+}
+END
+"""
+
+6. Impresión de cadenas y expresiones
+"""
+PROGRAM Prueba6;
+VAR x : INT;
+MAIN {
+    x = 5;
+    PRINT("El valor de x es:", x);
+}
+END
+"""
+
+7. Error semántico: uso de variable no declarada
+"""
+PROGRAM Prueba7;
+VAR x : INT;
+MAIN {
+    y = 10; // 'y' no está declarada
+}
+END
+"""
+
+8. Error semántico: asignación de tipo incorrecto
+"""
+PROGRAM Prueba8;
+VAR x : INT;
+MAIN {
+    x = 2.5; // Asignando FLOAT a INT
+}
+END
+"""
+
+9. Error sintáctico: falta de punto y coma
+"""
+PROGRAM Prueba9;
+VAR x : INT
+MAIN {
+    x = 5;
+}
+END
+"""
+
+10. Edge case: función sin cuerpo
+"""
+PROGRAM Prueba10;
+VAR x : INT;
+VOID vacia() [ ]
+MAIN {
+    x = 1;
+}
+END
+"""
+

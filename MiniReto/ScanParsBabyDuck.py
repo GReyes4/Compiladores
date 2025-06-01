@@ -45,41 +45,20 @@ def parse_code(code, grammar_file):
 
 # Ejemplo de código fuente en BabyDuck
 babyduck_code = """
-PROGRAM Test;
+PROGRAM Prueba5;
 VAR x : INT;
 y : FLOAT;
 MAIN {
-    x = 10 + 5;
-    IF (x > 5) {
-        x = x - 2 + 3 * 20;
-        y = 5.0;
-        PRINT("Mayor que 5");
+    x = (10 + 2) * 3 - 4 / 2;
+    y = 5.0 + x * 2;
+    IF (y < 20.5) {
+        PRINT("y es menor");
     };
-    
-    PRINT("Hola Mundo");
 }
 END
 """
 
-""" Prueba 2
-PROGRAM Test;
-VAR x : INT;
-MAIN {
-    x = 10;
-    IF (x > 5) {
-        PRINT("Mayor que 5");
-    } ELSE {
-        PRINT("Menor o igual a 5");
-    };
-    
-    WHILE (x != 0) DO {
-        x = x - 1;
-    };
-    
-    PRINT("Hola Mundo");
-}
-END
-"""
+
 
 # Prueba del cubo semántico
 def test_cubo_semantico():

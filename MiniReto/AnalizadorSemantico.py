@@ -24,32 +24,47 @@ class SemanticAnalyzer(Visitor):
         # children: [PROGRAM, ID, SEMICOLON, vars, funcs, MAIN, body, END]
         # Visitar primero las declaraciones de variables y funciones
         self.visit(tree.children[3])  # vars
-        self.visit(tree.children[4])  # funcs
+        funcs_node = tree.children[4]
+        # Procesa todas las funciones manualmente
+        while len(funcs_node.children) > 0:
+            self.funcs(funcs_node)
+            # El siguiente funcs está en la posición 10
+            funcs_node = funcs_node.children[10] if len(funcs_node.children) > 10 else Tree('funcs', [])
         self.visit(tree.children[6])  # body
 
     # --- Variables ---
     def vars(self, tree):
+        if len(tree.children) == 0:
+            return
         var_type = tree.children[3].children[0].value
         ids = self._collect_ids(tree.children[1])
+        print("Añadiendo vars, con .current_func:", self.current_func)
         if self.current_func:
             for var in ids:
                 self.current_func.tabla_variables.add_variable(var, var_type)
+                print(f"Variable local '{var}' de tipo '{var_type}' añadida.")
         else:
             for var in ids:
                 self.dir_func.add_global_variable(var, var_type)
-        # var_plus se maneja recursivamente
+        if len(tree.children) > 5 and isinstance(tree.children[5], Tree):
+            self.visit(tree.children[5])
 
     def var_plus(self, tree):
         if len(tree.children) == 0:
             return
         var_type = tree.children[2].children[0].value
         ids = self._collect_ids(tree.children[0])
+        print("Añadiendo var_plus, con .current_func:", self.current_func)
         if self.current_func:
+            print(f"Declarando variables locales en función '{self.current_func.name}'")
             for var in ids:
                 self.current_func.tabla_variables.add_variable(var, var_type)
+                print(f"Variable local '{var}' de tipo '{var_type}' añadida.")
         else:
             for var in ids:
                 self.dir_func.add_global_variable(var, var_type)
+        if len(tree.children) > 4 and isinstance(tree.children[4], Tree):
+            self.visit(tree.children[4])
 
     # --- Declaración de funciones ---
     def funcs(self, tree):
@@ -64,16 +79,27 @@ class SemanticAnalyzer(Visitor):
         for name, typ in zip(param_names, param_types):
             self.current_func.tabla_variables.add_variable(name, typ)
         # Las variables locales se agregan en vars()
-        # El cuerpo se puede analizar si quieres validar usos
+        # --- VISITA LAS VARIABLES LOCALES ANTES DEL BODY ---
+        self.visit(tree.children[6])  # vars
+        # Ahora sí, analiza el cuerpo
+        self.visit(tree.children[7])  # body
         self.current_func = None  # Reset al terminar
+        # Procesa posibles funciones siguientes
+        self.visit(tree.children[10])  # funcs
 
     def funcs_param(self, tree):
         # children: [ID, COLON, type, funcs_com]
+        if len(tree.children) == 0:
+            return ([], [])
         param_name = tree.children[0].value
         param_type = tree.children[2].children[0].value
         params = [(param_name, param_type)]
         params += self._collect_params(tree.children[3])
-        return ([typ for _, typ in params], [name for name, _ in params])
+        if not params:
+            return ([], [])
+        # Solo incluye tuplas válidas (de dos elementos)
+        filtered_params = [p for p in params if isinstance(p, tuple) and len(p) == 2]
+        return ([typ for _, typ in filtered_params], [name for name, _ in filtered_params])
 
     def funcs_com(self, tree):
         if len(tree.children) == 0:
@@ -94,19 +120,20 @@ class SemanticAnalyzer(Visitor):
         return self._collect_ids(com_tree.children[1])
 
     def _collect_params(self, param_tree):
-        # param_tree puede ser vacío
+        if not hasattr(param_tree, 'children') or len(param_tree.children) == 0:
+            return ([], [])
         if hasattr(param_tree, 'data') and param_tree.data == 'funcs_param':
             param_name = param_tree.children[0].value
             param_type = param_tree.children[2].children[0].value
             params = [(param_name, param_type)]
-            params += self._collect_params(param_tree.children[3])
-            return params
+            params_types, params_names = self._collect_params(param_tree.children[3])
+            return ([param_type] + params_types, [param_name] + params_names)
         elif hasattr(param_tree, 'data') and param_tree.data == 'funcs_com':
             if len(param_tree.children) == 0:
-                return []
+                return ([], [])
             return self._collect_params(param_tree.children[1])
         else:
-            return []
+            return ([], [])
         
     def asignacion(self, tree):
         var_name = tree.children[0].value

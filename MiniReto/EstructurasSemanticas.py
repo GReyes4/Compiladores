@@ -17,6 +17,7 @@ class TablaVariables:
         if name in self.variables:
             raise ValueError(f"Variable '{name}' ya declarada en este ámbito.")
         self.variables[name] = VariableInfo(name, var_type, scope)
+        print(f"Variable '{name}' de tipo '{var_type}' añadida al ámbito '{scope}'.")
 
     def get_variable(self, name):
         return self.variables.get(name)
