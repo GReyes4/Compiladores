@@ -1,23 +1,24 @@
 # Estructuras semánticas de Tabla de Variables y Directorio de Funciones
 
 class VariableInfo:
-    def __init__(self, name, var_type, scope='local'):
+    def __init__(self, name, var_type, scope='local', address=None):
         self.name = name
         self.type = var_type
         self.scope = scope  # 'global' o 'local'
+        self.address = address
 
     def __repr__(self):
-        return f"VariableInfo(name={self.name}, type={self.type}, scope={self.scope})"
+        return f"VariableInfo(name={self.name}, type={self.type}, scope={self.scope}, address={self.address})"
 
 class TablaVariables:
     def __init__(self):
         self.variables = {}
 
-    def add_variable(self, name, var_type, scope='local'):
+    def add_variable(self, name, var_type, scope='local', address=None):
         if name in self.variables:
             raise ValueError(f"Variable '{name}' ya declarada en este ámbito.")
-        self.variables[name] = VariableInfo(name, var_type, scope)
-        print(f"Variable '{name}' de tipo '{var_type}' añadida al ámbito '{scope}'.")
+        self.variables[name] = VariableInfo(name, var_type, scope, address)
+        print(f"Variable '{name}' de tipo '{var_type}' añadida al ámbito '{scope}' en {address}.")
 
     def get_variable(self, name):
         return self.variables.get(name)
@@ -49,9 +50,9 @@ class DirectorioFunciones:
     def get_funcion(self, name):
         return self.funciones.get(name)
 
-    def add_global_variable(self, name, var_type):
-        self.global_vars.add_variable(name, var_type, scope='global')
-        print(f"Variable global '{name}' de tipo '{var_type}' añadida.")
+    def add_global_variable(self, name, var_type, address=None):
+        self.global_vars.add_variable(name, var_type, scope='global', address=address)
+        print(f"Variable global '{name}' de tipo '{var_type}' añadida en {address}.")
 
     def get_global_variable(self, name):
         return self.global_vars.get_variable(name)

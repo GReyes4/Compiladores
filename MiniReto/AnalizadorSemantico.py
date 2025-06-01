@@ -2,12 +2,14 @@ from lark import Visitor, Token, Tree
 from CuboSemantico import check_semantic
 from EstructurasSemanticas import DirectorioFunciones
 from RepresentacionCuadruplos import QuadrupleGenerator
+from ManagerMemoria import VirtualMemoryManager
 
 class SemanticAnalyzer(Visitor):
     def __init__(self):
         self.dir_func = DirectorioFunciones()
         self.current_func = None  # None = global scope
         self.quad_gen = QuadrupleGenerator()
+        self.memory = VirtualMemoryManager()
 
     def analyze(self, tree):
         self.programa(tree.children[0])
@@ -44,22 +46,26 @@ class SemanticAnalyzer(Visitor):
         #print("Añadiendo vars, con .current_func:", self.current_func)
         if self.current_func:
             for var in ids:
-                self.current_func.tabla_variables.add_variable(var, var_type)
-                print(f"Variable local '{var}' de tipo '{var_type}' añadida.")
+                addr = self.memory.get_address('local', var_type)
+                self.current_func.tabla_variables.add_variable(var, var_type, address=addr)
+                print(f"Variable local '{var}' de tipo '{var_type}' añadida en {addr}.")
         else:
             for var in ids:
-                self.dir_func.add_global_variable(var, var_type)
+                addr = self.memory.get_address('global', var_type)
+                self.dir_func.add_global_variable(var, var_type, address=addr)
         var_plus_node = tree.children[5]
         while isinstance(var_plus_node, Tree) and var_plus_node.data == 'var_plus' and len(var_plus_node.children) > 0:
             var_type = var_plus_node.children[2].children[0].value
             ids = self._collect_ids(var_plus_node.children[0])
             if self.current_func:
                 for var in ids:
-                    self.current_func.tabla_variables.add_variable(var, var_type)
+                    addr = self.memory.get_address('local', var_type)
+                    self.current_func.tabla_variables.add_variable(var, var_type, address=addr)
                     print(f"Variable local '{var}' de tipo '{var_type}' añadida.")
             else:
                 for var in ids:
-                    self.dir_func.add_global_variable(var, var_type)
+                    addr = self.memory.get_address('global', var_type)
+                    self.dir_func.add_global_variable(var, var_type, address=addr)
             var_plus_node = var_plus_node.children[4] if len(var_plus_node.children) > 4 else None
 
     def var_plus(self, tree):
@@ -175,23 +181,36 @@ class SemanticAnalyzer(Visitor):
         except Exception as e:
             raise Exception(f"Error de tipo en asignación a '{var_name}': {e}")
         expr_result = self._generate_expression_quadruples(tree.children[2])
-        self.quad_gen.add_quadruple('=', expr_type, '-', var_name)
+        self.quad_gen.add_quadruple('=', expr_result, '-', var_info.address)
 
     def condition(self, tree):
         # condition: IF LPAREN expression RPAREN body else SEMICOLON
         # Procesa la condición
         expr_type = self._get_expression_type(tree.children[2])
-        # Aquí podrías generar cuádruplos de salto condicional
-        self.body(tree.children[4])  # body del IF
-        if len(tree.children) > 5:
-            self.else_(tree.children[5])
-        """Propuesta 1 de condition *Revisar*
-        # condition: IF LPAREN expression RPAREN LBRACE body RBRACE
-        expr_type = self._get_expression_type(tree.children[2])
         if expr_type != 'BOOL':
             raise Exception(f"Condición debe ser de tipo BOOL, pero se encontró '{expr_type}'")
-        self.quad_gen.add_quadruple('IF', expr_type, '-', 'GOTO')
-        self.body(tree.children[5])"""
+        
+        expr_result = self._generate_expression_quadruples(tree.children[2])
+        gotof_index = len(self.quad_gen.quad_queue)
+        self.quad_gen.add_quadruple('GOTOF', expr_result, '-', None)
+        # Procesa el cuerpo del IF
+        self.body(tree.children[4])  # body del IF
+
+        if len(tree.children) > 5 and len(tree.children[5].children) > 0:
+            # Hay ELSE
+            goto_end_index = len(self.quad_gen.quad_queue)
+            self.quad_gen.add_quadruple('GOTO', '-', '-', None)
+            # Rellena el salto del GOTOF al inicio del ELSE
+            else_start = len(self.quad_gen.quad_queue)
+            self.quad_gen.quad_queue[gotof_index] = ('GOTOF', expr_result, '-', else_start)
+            self.else_(tree.children[5])
+            # Rellena el salto del GOTO al final del ELSE
+            end_else = len(self.quad_gen.quad_queue)
+            self.quad_gen.quad_queue[goto_end_index] = ('GOTO', '-', '-', end_else)
+        else:
+            # No hay ELSE, rellena el salto del GOTOF al final del IF
+            end_if = len(self.quad_gen.quad_queue)
+            self.quad_gen.quad_queue[gotof_index] = ('GOTOF', expr_result, '-', end_if)
         
     def else_(self, tree):
         # else: ELSE body | 
@@ -202,9 +221,20 @@ class SemanticAnalyzer(Visitor):
 
     def cycle(self, tree):
         # cycle: WHILE LPAREN expression RPAREN DO body SEMICOLON
+        condition_index = len(self.quad_gen.quad_queue)
         expr_type = self._get_expression_type(tree.children[2])
-        # Aquí podrías generar cuádruplos de salto condicional y de ciclo
+        if expr_type != 'BOOL':
+            raise Exception(f"Condición de ciclo debe ser de tipo BOOL, pero se encontró '{expr_type}'")
+        
+        # Genera cuádruplos para el ciclo
+        expr_result = self._generate_expression_quadruples(tree.children[2])
+        gotof_index = len(self.quad_gen.quad_queue)
+        self.quad_gen.add_quadruple('GOTOF', expr_result, '-', None)
         self.body(tree.children[5])
+        # GOTO al inicio del ciclo
+        self.quad_gen.add_quadruple('GOTO', '-', '-', condition_index)
+        end_while = len(self.quad_gen.quad_queue)
+        self.quad_gen.quad_queue[gotof_index] = ('GOTOF', expr_result, '-', end_while)
 
     def f_call(self, tree):
         # f_call: ID LPAREN func_exp RPAREN SEMICOLON
@@ -291,36 +321,45 @@ class SemanticAnalyzer(Visitor):
         # Recorrido postorden para generar cuádruplos de expresiones
         if tree.data == 'expression':
             left = self._generate_expression_quadruples(tree.children[0])
+            left_type = self._get_expression_type(tree.children[0])
             if len(tree.children) > 1 and tree.children[1].children:
                 op_token = tree.children[1].children[0]
                 op_map = {'LT': '<', 'GT': '>', 'NEQ': '!='}
                 op = op_map.get(op_token.type, op_token.type)
                 right = self._generate_expression_quadruples(tree.children[1].children[1])
-                temp = self.quad_gen.generate_temp()
-                self.quad_gen.add_quadruple(op, left, right, temp)
-                return temp
+                right_type = self._get_expression_type(tree.children[1].children[1])
+                temp_type = check_semantic(op, left_type, right_type)
+                temp_addr = self.memory.get_address('temp', temp_type)
+                self.quad_gen.add_quadruple(op, left, right, temp_addr)
+                return temp_addr
             return left
         elif tree.data == 'exp':
             left = self._generate_expression_quadruples(tree.children[0])
+            left_type = self._get_expression_type(tree.children[0])
             if len(tree.children) > 1 and tree.children[1].children:
                 op_token = tree.children[1].children[0]
                 op_map = {'PLUS': '+', 'MINUS': '-'}
                 op = op_map.get(op_token.type, op_token.type)
                 right = self._generate_expression_quadruples(tree.children[1].children[1])
-                temp = self.quad_gen.generate_temp()
-                self.quad_gen.add_quadruple(op, left, right, temp)
-                return temp
+                right_type = self._get_expression_type(tree.children[1].children[1])
+                temp_type = check_semantic(op, left_type, right_type)
+                temp_addr = self.memory.get_address('temp', temp_type)
+                self.quad_gen.add_quadruple(op, left, right, temp_addr)
+                return temp_addr
             return left
         elif tree.data == 'termino':
             left = self._generate_expression_quadruples(tree.children[0])
+            left_type = self._get_expression_type(tree.children[0])
             if len(tree.children) > 1 and tree.children[1].children:
                 op_token = tree.children[1].children[0]
                 op_map = {'MULT': '*', 'DIV': '/'}
                 op = op_map.get(op_token.type, op_token.type)
                 right = self._generate_expression_quadruples(tree.children[1].children[1])
-                temp = self.quad_gen.generate_temp()
-                self.quad_gen.add_quadruple(op, left, right, temp)
-                return temp
+                right_type = self._get_expression_type(tree.children[1].children[1])
+                temp_type = check_semantic(op, left_type, right_type)
+                temp_addr = self.memory.get_address('temp', temp_type)
+                self.quad_gen.add_quadruple(op, left, right, temp_addr)
+                return temp_addr
             return left
         elif tree.data == 'factor':
             first = tree.children[0]
@@ -334,12 +373,17 @@ class SemanticAnalyzer(Visitor):
         elif tree.data == 'ct_id':
             first = tree.children[0]
             if isinstance(first, Token) and first.type == 'ID':
-                return first.value
+                var_name = first.value
+                var_info = self._find_variable(var_name)
+                return var_info.address
             else:
                 return self._generate_expression_quadruples(first)
         elif tree.data == 'cte':
             token = tree.children[0]
-            return token.value
+            if token.type == 'CTE_INT':
+                return self.memory.get_const_address(token.value, 'INT')
+            elif token.type == 'CTE_FLOAT':
+                return self.memory.get_const_address(token.value, 'FLOAT')
         else:
             raise Exception(f"No se puede generar cuádruplo para: {tree.data}")
     
