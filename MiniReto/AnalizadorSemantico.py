@@ -33,7 +33,7 @@ class SemanticAnalyzer(Visitor):
             self.funcs(funcs_node)
             # El siguiente funcs está en la posición 10
             funcs_node = funcs_node.children[10] if len(funcs_node.children) > 10 else Tree('funcs', [])
-        self.visit(tree.children[6])  # body
+        self.body(tree.children[6])  # body
 
     # --- Variables ---
     def vars(self, tree):
@@ -81,7 +81,7 @@ class SemanticAnalyzer(Visitor):
         # --- VISITA LAS VARIABLES LOCALES ANTES DEL BODY ---
         self.visit(tree.children[6])  # vars
         # Ahora sí, analiza el cuerpo
-        self.visit(tree.children[7])  # body
+        self.body(tree.children[7])  # body
         self.current_func = None  # Reset al terminar
         # Procesa posibles funciones siguientes
         self.visit(tree.children[10])  # funcs
@@ -134,6 +134,36 @@ class SemanticAnalyzer(Visitor):
         else:
             return ([], [])
         
+    def body(self, tree):
+        # body: LBRACE statement RBRACE
+        self.statement(tree.children[1])
+
+    def statement(self, tree):
+        # statement: asignacion statement
+        #          | condition statement
+        #          | cycle statement
+        #          | f_call statement
+        #          | print statement
+        #          |
+        if len(tree.children) == 0:
+            return
+        first = tree.children[0]
+        if isinstance(first, Tree):
+            if first.data == 'asignacion':
+                self.asignacion(first)
+            elif first.data == 'print':
+                self.print(first)
+            elif first.data == 'condition':
+                self.condition(first)
+            elif first.data == 'cycle':
+                self.cycle(first)
+            elif first.data == 'f_call':
+                self.f_call(first)
+            # Aquí agregaría más estatutos si lo necesito
+        # Procesa el siguiente statement (recursivo)
+        if len(tree.children) > 1:
+            self.statement(tree.children[1])
+        
     def asignacion(self, tree):
         var_name = tree.children[0].value
         var_info = self._find_variable(var_name)
@@ -146,7 +176,41 @@ class SemanticAnalyzer(Visitor):
             raise Exception(f"Error de tipo en asignación a '{var_name}': {e}")
         expr_result = self._generate_expression_quadruples(tree.children[2])
         self.quad_gen.add_quadruple('=', expr_type, '-', var_name)
+
+    def condition(self, tree):
+        # condition: IF LPAREN expression RPAREN body else SEMICOLON
+        # Procesa la condición
+        expr_type = self._get_expression_type(tree.children[2])
+        # Aquí podrías generar cuádruplos de salto condicional
+        self.body(tree.children[4])  # body del IF
+        if len(tree.children) > 5:
+            self.else_(tree.children[5])
+        """Propuesta 1 de condition *Revisar*
+        # condition: IF LPAREN expression RPAREN LBRACE body RBRACE
+        expr_type = self._get_expression_type(tree.children[2])
+        if expr_type != 'BOOL':
+            raise Exception(f"Condición debe ser de tipo BOOL, pero se encontró '{expr_type}'")
+        self.quad_gen.add_quadruple('IF', expr_type, '-', 'GOTO')
+        self.body(tree.children[5])"""
         
+    def else_(self, tree):
+        # else: ELSE body | 
+        if len(tree.children) == 0:
+            return
+        # Si hay ELSE, procesa el body
+        self.body(tree.children[1])
+
+    def cycle(self, tree):
+        # cycle: WHILE LPAREN expression RPAREN DO body SEMICOLON
+        expr_type = self._get_expression_type(tree.children[2])
+        # Aquí podrías generar cuádruplos de salto condicional y de ciclo
+        self.body(tree.children[5])
+
+    def f_call(self, tree):
+        # f_call: ID LPAREN func_exp RPAREN SEMICOLON
+        # Aquí podrías procesar la llamada a función y sus argumentos
+        pass
+
     def _get_expression_type(self, tree):
         # expression: exp exp_opc
         if tree.data == 'expression':
