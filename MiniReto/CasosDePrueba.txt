@@ -98,7 +98,7 @@ PROGRAM Prueba5;
 VAR x : INT;
 y : FLOAT;
 MAIN {
-    x = (10 + 2) * 3 - 4 / 2;
+    x = (10 + 2) * 3 - 4 + 2;
     y = 5.0 + x * 2;
     IF (y < 20.5) {
         PRINT("y es menor");
@@ -123,7 +123,7 @@ END
 PROGRAM Prueba7;
 VAR x : INT;
 MAIN {
-    y = 10; // 'y' no está declarada
+    y = 10;
 }
 END
 """
@@ -133,7 +133,7 @@ END
 PROGRAM Prueba8;
 VAR x : INT;
 MAIN {
-    x = 2.5; // Asignando FLOAT a INT
+    x = 2.5; 
 }
 END
 """
@@ -152,7 +152,7 @@ END
 """
 PROGRAM Prueba10;
 VAR x : INT;
-VOID vacia() [ ]
+VOID vacia() [ { } ];
 MAIN {
     x = 1;
 }

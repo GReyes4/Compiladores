@@ -45,19 +45,14 @@ def parse_code(code, grammar_file):
 
 # Ejemplo de código fuente en BabyDuck
 babyduck_code = """
-PROGRAM Prueba5;
+PROGRAM Prueba10;
 VAR x : INT;
-y : FLOAT;
+VOID vacia() [ { } ];
 MAIN {
-    x = (10 + 2) * 3 - 4 / 2;
-    y = 5.0 + x * 2;
-    IF (y < 20.5) {
-        PRINT("y es menor");
-    };
+    x = 1;
 }
 END
 """
-
 
 
 # Prueba del cubo semántico

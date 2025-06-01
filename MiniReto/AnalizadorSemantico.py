@@ -38,7 +38,7 @@ class SemanticAnalyzer(Visitor):
             return
         var_type = tree.children[3].children[0].value
         ids = self._collect_ids(tree.children[1])
-        print("Añadiendo vars, con .current_func:", self.current_func)
+        #print("Añadiendo vars, con .current_func:", self.current_func)
         if self.current_func:
             for var in ids:
                 self.current_func.tabla_variables.add_variable(var, var_type)
@@ -46,25 +46,21 @@ class SemanticAnalyzer(Visitor):
         else:
             for var in ids:
                 self.dir_func.add_global_variable(var, var_type)
-        if len(tree.children) > 5 and isinstance(tree.children[5], Tree):
-            self.visit(tree.children[5])
+        var_plus_node = tree.children[5]
+        while isinstance(var_plus_node, Tree) and var_plus_node.data == 'var_plus' and len(var_plus_node.children) > 0:
+            var_type = var_plus_node.children[2].children[0].value
+            ids = self._collect_ids(var_plus_node.children[0])
+            if self.current_func:
+                for var in ids:
+                    self.current_func.tabla_variables.add_variable(var, var_type)
+                    print(f"Variable local '{var}' de tipo '{var_type}' añadida.")
+            else:
+                for var in ids:
+                    self.dir_func.add_global_variable(var, var_type)
+            var_plus_node = var_plus_node.children[4] if len(var_plus_node.children) > 4 else None
 
     def var_plus(self, tree):
-        if len(tree.children) == 0:
-            return
-        var_type = tree.children[2].children[0].value
-        ids = self._collect_ids(tree.children[0])
-        print("Añadiendo var_plus, con .current_func:", self.current_func)
-        if self.current_func:
-            print(f"Declarando variables locales en función '{self.current_func.name}'")
-            for var in ids:
-                self.current_func.tabla_variables.add_variable(var, var_type)
-                print(f"Variable local '{var}' de tipo '{var_type}' añadida.")
-        else:
-            for var in ids:
-                self.dir_func.add_global_variable(var, var_type)
-        if len(tree.children) > 4 and isinstance(tree.children[4], Tree):
-            self.visit(tree.children[4])
+        return
 
     # --- Declaración de funciones ---
     def funcs(self, tree):
