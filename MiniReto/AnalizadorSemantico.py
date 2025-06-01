@@ -1,16 +1,19 @@
 from lark import Visitor, Token, Tree
 from CuboSemantico import check_semantic
 from EstructurasSemanticas import DirectorioFunciones
+from RepresentacionCuadruplos import QuadrupleGenerator
 
 class SemanticAnalyzer(Visitor):
     def __init__(self):
         self.dir_func = DirectorioFunciones()
         self.current_func = None  # None = global scope
+        self.quad_gen = QuadrupleGenerator()
 
     def analyze(self, tree):
         self.programa(tree.children[0])
         print("Directorio de Funciones construido:")
         print(self.dir_func)
+        self.quad_gen.print_quadruples()
 
     def _find_variable(self, name):
         if self.current_func:
@@ -141,6 +144,8 @@ class SemanticAnalyzer(Visitor):
             check_semantic('=', var_info.type, expr_type)
         except Exception as e:
             raise Exception(f"Error de tipo en asignación a '{var_name}': {e}")
+        expr_result = self._generate_expression_quadruples(tree.children[2])
+        self.quad_gen.add_quadruple('=', expr_type, '-', var_name)
         
     def _get_expression_type(self, tree):
         # expression: exp exp_opc
@@ -217,3 +222,80 @@ class SemanticAnalyzer(Visitor):
         elif tree.data == 'print_cont' and isinstance(tree.children[0], Token) and tree.children[0].type == 'STRING':
             return 'STRING'
         raise Exception(f"No se pudo determinar el tipo de la expresión: {tree.data}")
+    
+    def _generate_expression_quadruples(self, tree):
+        # Recorrido postorden para generar cuádruplos de expresiones
+        if tree.data == 'expression':
+            left = self._generate_expression_quadruples(tree.children[0])
+            if len(tree.children) > 1 and tree.children[1].children:
+                op_token = tree.children[1].children[0]
+                op_map = {'LT': '<', 'GT': '>', 'NEQ': '!='}
+                op = op_map.get(op_token.type, op_token.type)
+                right = self._generate_expression_quadruples(tree.children[1].children[1])
+                temp = self.quad_gen.generate_temp()
+                self.quad_gen.add_quadruple(op, left, right, temp)
+                return temp
+            return left
+        elif tree.data == 'exp':
+            left = self._generate_expression_quadruples(tree.children[0])
+            if len(tree.children) > 1 and tree.children[1].children:
+                op_token = tree.children[1].children[0]
+                op_map = {'PLUS': '+', 'MINUS': '-'}
+                op = op_map.get(op_token.type, op_token.type)
+                right = self._generate_expression_quadruples(tree.children[1].children[1])
+                temp = self.quad_gen.generate_temp()
+                self.quad_gen.add_quadruple(op, left, right, temp)
+                return temp
+            return left
+        elif tree.data == 'termino':
+            left = self._generate_expression_quadruples(tree.children[0])
+            if len(tree.children) > 1 and tree.children[1].children:
+                op_token = tree.children[1].children[0]
+                op_map = {'MULT': '*', 'DIV': '/'}
+                op = op_map.get(op_token.type, op_token.type)
+                right = self._generate_expression_quadruples(tree.children[1].children[1])
+                temp = self.quad_gen.generate_temp()
+                self.quad_gen.add_quadruple(op, left, right, temp)
+                return temp
+            return left
+        elif tree.data == 'factor':
+            first = tree.children[0]
+            if isinstance(first, Tree) and first.data == 'fact_signo':
+                # Unario, solo propagamos el valor
+                return self._generate_expression_quadruples(tree.children[1])
+            elif isinstance(first, Token) and first.type == 'LPAREN':
+                return self._generate_expression_quadruples(tree.children[1])
+            else:
+                return self._generate_expression_quadruples(first)
+        elif tree.data == 'ct_id':
+            first = tree.children[0]
+            if isinstance(first, Token) and first.type == 'ID':
+                return first.value
+            else:
+                return self._generate_expression_quadruples(first)
+        elif tree.data == 'cte':
+            token = tree.children[0]
+            return token.value
+        else:
+            raise Exception(f"No se puede generar cuádruplo para: {tree.data}")
+    
+    def print(self, tree):
+        # print: PRINT LPAREN print_cont RPAREN SEMICOLON
+        print_cont_node = tree.children[2]
+        self._handle_print_cont(print_cont_node)
+
+    def _handle_print_cont(self, tree):
+        # print_cont: expression print_com | STRING print_com
+        if isinstance(tree.children[0], Token) and tree.children[0].type == 'STRING':
+            value = tree.children[0].value
+            self.quad_gen.add_quadruple('PRINT', value, '-', '-')
+            # Si hay más, procesa recursivamente
+            if len(tree.children) > 1 and len(tree.children[1].children) > 0:
+                self._handle_print_cont(tree.children[1].children[1])
+        else:
+            # Es una expresión
+            expr_result = self._generate_expression_quadruples(tree.children[0])
+            self.quad_gen.add_quadruple('PRINT', expr_result, '-', '-')
+            # Si hay más, procesa recursivamente
+            if len(tree.children) > 1 and len(tree.children[1].children) > 0:
+                self._handle_print_cont(tree.children[1].children[1])
