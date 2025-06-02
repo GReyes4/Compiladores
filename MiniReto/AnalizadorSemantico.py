@@ -88,7 +88,7 @@ class SemanticAnalyzer(Visitor):
         for name, typ in zip(param_names, param_types):
             addr = self.memory.get_address('local', typ)
             self.current_func.tabla_variables.add_variable(name, typ, address=addr)
-        # Las variables locales se agregan en vars()
+        
         # --- VISITA LAS VARIABLES LOCALES ANTES DEL BODY ---
         self.visit(tree.children[6])  # vars
         self.body(tree.children[7])  # body
