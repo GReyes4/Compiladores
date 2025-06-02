@@ -1,5 +1,4 @@
-
-General 1
+Temporal 1
 """
 PROGRAM Test;
 VAR x : INT;
@@ -17,7 +16,7 @@ MAIN {
 END
 """
 
-General 2
+Temporal 2
 """
 PROGRAM Test;
 VAR x : INT;
@@ -31,6 +30,7 @@ MAIN {
     
     WHILE (x != 0) DO {
         x = x - 1;
+        PRINT(x);
     };
     
     PRINT("Hola Mundo");
@@ -46,6 +46,7 @@ b : FLOAT;
 MAIN {
     a = 5;
     b = 2.5;
+    PRINT (a + b);
 }
 END
 """
@@ -98,8 +99,8 @@ PROGRAM Prueba5;
 VAR x : INT;
 y : FLOAT;
 MAIN {
-    x = (10 + 2) * 3 - 4 + 2;
-    y = 5.0 + x * 2;
+    x = (10 - 2) * 2 - 4 - 2;
+    y = 5.0 - x * 2;
     IF (y < 20.5) {
         PRINT("y es menor");
     };

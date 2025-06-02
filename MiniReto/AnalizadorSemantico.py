@@ -10,6 +10,7 @@ class SemanticAnalyzer(Visitor):
         self.current_func = None  # None = global scope
         self.quad_gen = QuadrupleGenerator()
         self.memory = VirtualMemoryManager()
+        self.main_start_quad = None
 
     def analyze(self, tree):
         self.programa(tree.children[0])
@@ -35,7 +36,9 @@ class SemanticAnalyzer(Visitor):
             self.funcs(funcs_node)
             # El siguiente funcs está en la posición 10
             funcs_node = funcs_node.children[10] if len(funcs_node.children) > 10 else Tree('funcs', [])
+        self.main_start_quad = len(self.quad_gen.quad_queue)
         self.body(tree.children[6])  # body
+        
 
     # --- Variables ---
     def vars(self, tree):
@@ -80,17 +83,20 @@ class SemanticAnalyzer(Visitor):
         param_types, param_names = self._collect_params(tree.children[3])
         self.dir_func.add_funcion(func_name, 'VOID', param_types)
         self.current_func = self.dir_func.get_funcion(func_name)
+        self.current_func.start_quad = len(self.quad_gen.quad_queue)
         # Agregar parámetros como variables locales
         for name, typ in zip(param_names, param_types):
-            self.current_func.tabla_variables.add_variable(name, typ)
+            addr = self.memory.get_address('local', typ)
+            self.current_func.tabla_variables.add_variable(name, typ, address=addr)
         # Las variables locales se agregan en vars()
         # --- VISITA LAS VARIABLES LOCALES ANTES DEL BODY ---
         self.visit(tree.children[6])  # vars
-        # Ahora sí, analiza el cuerpo
         self.body(tree.children[7])  # body
         self.current_func = None  # Reset al terminar
         # Procesa posibles funciones siguientes
+        self.quad_gen.add_quadruple('ENDPROC', '-', '-', '-')
         self.visit(tree.children[10])  # funcs
+        
 
     def funcs_param(self, tree):
         # children: [ID, COLON, type, funcs_com]
@@ -165,7 +171,6 @@ class SemanticAnalyzer(Visitor):
                 self.cycle(first)
             elif first.data == 'f_call':
                 self.f_call(first)
-            # Aquí agregaría más estatutos si lo necesito
         # Procesa el siguiente statement (recursivo)
         if len(tree.children) > 1:
             self.statement(tree.children[1])
@@ -238,8 +243,35 @@ class SemanticAnalyzer(Visitor):
 
     def f_call(self, tree):
         # f_call: ID LPAREN func_exp RPAREN SEMICOLON
-        # Aquí podrías procesar la llamada a función y sus argumentos
-        pass
+        func_name = tree.children[0].value
+        func_info = self.dir_func.get_funcion(func_name)
+        if not func_info:
+            raise Exception(f"Función '{func_name}' no declarada.")
+        # ERA: prepara el activation record
+        self.quad_gen.add_quadruple('ERA', func_name, '-', '-')
+        # Procesa los argumentos
+        if len(tree.children) > 2 and len(tree.children[2].children) > 0:
+            self._generate_func_args(tree.children[2], func_info)
+        # GOSUB: salta al inicio de la función
+        self.quad_gen.add_quadruple('GOSUB', func_name, '-', func_info.start_quad)
+
+    def _generate_func_args(self, tree, func_info):
+        # func_exp: expression func_ecom | 
+        # func_ecom: COMMA func_exp | 
+        param_idx = 0
+        node = tree
+        while node and len(node.children) > 0:
+            expr_result = self._generate_expression_quadruples(node.children[0])
+            param_name = func_info.tabla_variables.variables[list(func_info.tabla_variables.variables.keys())[param_idx]].name
+            param_var = func_info.tabla_variables.get_variable(param_name)
+            param_addr = param_var.address
+            self.quad_gen.add_quadruple('PARAM', expr_result, '-', param_addr)
+            param_idx += 1
+            # Avanza al siguiente argumento si existe
+            if len(node.children) > 1 and len(node.children[1].children) > 0:
+                node = node.children[1].children[1]
+            else:
+                break
 
     def _get_expression_type(self, tree):
         # expression: exp exp_opc
@@ -364,7 +396,6 @@ class SemanticAnalyzer(Visitor):
         elif tree.data == 'factor':
             first = tree.children[0]
             if isinstance(first, Tree) and first.data == 'fact_signo':
-                # Unario, solo propagamos el valor
                 return self._generate_expression_quadruples(tree.children[1])
             elif isinstance(first, Token) and first.type == 'LPAREN':
                 return self._generate_expression_quadruples(tree.children[1])

@@ -1,0 +1,89 @@
+1. Factorial en el MAIN 
+"""
+PROGRAM FactorialMain;
+VAR n, res, i : INT;
+MAIN {
+    n = 8;
+    res = 1;
+    i = 1;
+    WHILE (i < n + 1) DO {
+        res = res * i;
+        i = i + 1;
+    };
+    PRINT("Factorial de ", n, " es ", res);
+}
+END
+"""
+
+2. Factorial en función cíclica
+"""
+PROGRAM FactorialFunc;
+VAR n : INT;
+res : INT;
+VOID factorial(num : INT) [ VAR i : INT; temp : INT; {
+    temp = 1;
+    i = 1;
+    WHILE (i < num + 1) DO {
+        temp = temp * i;
+        i = i + 1;
+    };
+    PRINT("Factorial de ", num, " es ", temp);
+} ];
+MAIN {
+    n = 6;
+    factorial(n);
+}
+END
+"""
+
+
+3. Fibonacci en el MAIN (sin función)
+"""
+PROGRAM FibonacciMain;
+VAR n, a, b, c, i : INT;
+MAIN {
+    n = 12;
+    a = 0;
+    b = 1;
+    PRINT(a);
+    PRINT(b);
+    i = 2;
+    WHILE (i < n) DO {
+        c = a + b;
+        PRINT(c);
+        a = b;
+        b = c;
+        i = i + 1;
+    };
+}
+END
+"""
+
+
+4. Fibonacci en función cíclica
+"""
+PROGRAM FibonacciFunc;
+VAR n : INT;
+VOID fibonacci(num : INT) [ VAR a : INT; b : INT; c : INT; i : INT; {
+    a = 0;
+    b = 1;
+    PRINT(a);
+    PRINT(b);
+    i = 2;
+    WHILE (i < num) DO {
+        c = a + b;
+        PRINT(c);
+        a = b;
+        b = c;
+        i = i + 1;
+    };
+} ];
+MAIN {
+    n = 8;
+    fibonacci(n);
+}
+END
+"""
+
+
+
