@@ -19,5 +19,5 @@ class QuadrupleGenerator:
     def print_quadruples(self):
         """Imprime todos los cuádruplos generados."""
         print("Cuádruplos generados:")
-        for i, quad in enumerate(self.quad_queue, start=1):
+        for i, quad in enumerate(self.quad_queue, start=0):
             print(f"{i}: {quad}")

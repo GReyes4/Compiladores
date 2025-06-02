@@ -2,6 +2,8 @@ from lark import Lark, UnexpectedInput
 import os
 from CuboSemantico import check_semantic
 from AnalizadorSemantico import SemanticAnalyzer
+from MaquinaVirtual import BabyDuckVM
+from MemoriaEjecucion import ExecutionMemory
 
 # Obtener la ruta del directorio donde está el script
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -38,48 +40,37 @@ def parse_code(code, grammar_file):
         analyzer = SemanticAnalyzer()
         analyzer.analyze(tree)
         print("Análisis semántico completado sin errores.")
-
+        return analyzer
+        
     except UnexpectedInput as e:
         print("Error de sintaxis:")
         print(e)
 
 # Ejemplo de código fuente en BabyDuck
 babyduck_code = """
-PROGRAM Test;
-VAR x : INT;
-y : FLOAT;
-MAIN {
-    x = 10 + 5;
-    IF (x > 5) {
-        x = x - 2 + 3 * 20;
-        y = 5.0;
-        PRINT("Mayor que 5");
+PROGRAM FibonacciFunc;
+VAR n : INT;
+VOID fibonacci(num : INT) [ VAR a, b, c, i : INT; {
+    a = 0;
+    b = 1;
+    PRINT(a);
+    PRINT(b);
+    i = 2;
+    WHILE (i < num) DO {
+        c = a + b;
+        PRINT(c);
+        a = b;
+        b = c;
+        i = i + 1;
     };
-    
-    PRINT("Hola Mundo");
+} ];
+MAIN {
+    n = 12;
+    fibonacci(n);
 }
 END
 """
 
-""" Prueba 2
-PROGRAM Test;
-VAR x : INT;
-MAIN {
-    x = 10;
-    IF (x > 5) {
-        PRINT("Mayor que 5");
-    } ELSE {
-        PRINT("Menor o igual a 5");
-    };
-    
-    WHILE (x != 0) DO {
-        x = x - 1;
-    };
-    
-    PRINT("Hola Mundo");
-}
-END
-"""
 
 # Prueba del cubo semántico
 def test_cubo_semantico():
@@ -92,4 +83,27 @@ def test_cubo_semantico():
 
 # Procesar código
 if __name__ == "__main__":
-    parse_code(babyduck_code, GRAMMAR_FILE)
+    analyzer = parse_code(babyduck_code, GRAMMAR_FILE)
+
+    if analyzer:
+        quadruples = analyzer.quad_gen.quad_queue
+        # Inicializa la memoria global (puedes llenarla con valores iniciales si lo deseas)
+        global_memory = ExecutionMemory()
+
+        # Inicializa las constantes en la memoria global
+        for const_value, address in analyzer.memory.constants_table.items():
+            # Convierte el valor si es necesario (por ejemplo, de string a int/float)
+            if isinstance(const_value, str) and const_value.isdigit():
+                value = int(const_value)
+            else:
+                try:
+                    value = float(const_value)
+                except (ValueError, TypeError):
+                    value = const_value
+            global_memory.set_value(address, value)
+        
+        # Ejecuta la máquina virtual
+        print("\nEjecutando el programa...")
+        vm = BabyDuckVM(quadruples, global_memory, start_ip=analyzer.main_start_quad)
+        vm.run()
+
